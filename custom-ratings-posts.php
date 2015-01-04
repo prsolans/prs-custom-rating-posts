@@ -272,6 +272,16 @@ function display_category_ratings_table($posttype, $category)
  */
 function get_all_ratings($heading, $ratings, $posttype, $postId)
 {
+
+    $scores = get_ratings_for_single_post($heading, $posttype, $postId);
+
+    $allScores = calculate_post_ratings($scores, $ratings, $ratingsSubmitted);
+
+    return $allScores;
+}
+
+function get_ratings_for_single_post($heading, $posttype, $postId) {
+
     $authors = array('prs', 'allykc');
 
     $fieldnames = array();
@@ -295,20 +305,26 @@ function get_all_ratings($heading, $ratings, $posttype, $postId)
         }
     }
 
+    $scores['count'] = $ratingsSubmitted;
+
+    return $scores;
+}
+
+function calculate_post_ratings($scores, $ratings, $ratingsSubmitted) {
     //calculate combined scores
     $score1 = $scores[0] + $scores[3];
     $score2 = $scores[1] + $scores[4];
     $score3 = $scores[2] + $scores[5];
     $totalScore = $score1 + $score2 + $score3;
 
-    if ($ratingsSubmitted == 6) {
+    if ($scores['count'] == 6) {
         $calculatedScores[$ratings[0]] = $score1 / 2;
         $calculatedScores[$ratings[1]] = $score2 / 2;
         $calculatedScores[$ratings[2]] = $score3 / 2;
         $calculatedScores['totalScore'] = $totalScore / 2;
         $calculatedScores['overallScore'] = round($totalScore / 6, 1);
         $calculatedScores['incomplete'] = false;
-    } elseif ($ratingsSubmitted == 3) {
+    } elseif ($scores['count'] == 3) {
         $calculatedScores[$ratings[0]] = $score1;
         $calculatedScores[$ratings[1]] = $score2;
         $calculatedScores[$ratings[2]] = $score3;
@@ -323,6 +339,7 @@ function get_all_ratings($heading, $ratings, $posttype, $postId)
         $calculatedScores['overallScore'] = '*';
         $calculatedScores['incomplete'] = true;
     }
+
     return $calculatedScores;
 }
 
@@ -410,7 +427,7 @@ function display_recent_ratings($lastMonth = false)
     $numericalMonth = date('m');
     $yearToDisplay = date('Y');
 
-    if ($monthToDisplay == 'January'){
+    if ($monthToDisplay == 'January') {
         $yearToDisplay = date('Y', strtotime('-1 years'));
     }
     if ($lastMonth == true) {
@@ -438,8 +455,8 @@ function display_recent_ratings($lastMonth = false)
             ),
         )
     ));
-    echo "<ul>";
     if ($posts) {
+        echo "<ul>";
 
         $i = 0;
 
@@ -461,9 +478,11 @@ function display_recent_ratings($lastMonth = false)
         foreach ($list AS $item) {
             echo "<li><a href='" . $item['link'] . "'> " . $item['title'] . "</a> - " . $item['overallScore'] . "</li>";
         }
-    }
+        echo "</ul>";
 
-    echo "</ul>";
+    } else {
+        echo "Nothing to report so far this month.";
+    }
 }
 
 /**
