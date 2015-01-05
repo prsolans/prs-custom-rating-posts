@@ -275,12 +275,13 @@ function get_all_ratings($heading, $ratings, $posttype, $postId)
 
     $scores = get_ratings_for_single_post($heading, $posttype, $postId);
 
-    $allScores = calculate_post_ratings($scores, $ratings, $ratingsSubmitted);
+    $allScores = calculate_post_ratings($scores, $ratings);
 
     return $allScores;
 }
 
-function get_ratings_for_single_post($heading, $posttype, $postId) {
+function get_ratings_for_single_post($heading, $posttype, $postId)
+{
 
     $authors = array('prs', 'allykc');
 
@@ -310,7 +311,8 @@ function get_ratings_for_single_post($heading, $posttype, $postId) {
     return $scores;
 }
 
-function calculate_post_ratings($scores, $ratings, $ratingsSubmitted) {
+function calculate_post_ratings($scores, $ratings)
+{
     //calculate combined scores
     $score1 = $scores[0] + $scores[3];
     $score2 = $scores[1] + $scores[4];
@@ -542,3 +544,5 @@ function get_location_address($location)
     }
     return $htmlAddress;
 }
+
+

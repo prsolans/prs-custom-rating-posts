@@ -28,6 +28,7 @@ function create_restaurant_post_type()
             'supports' => array('title', 'editor', 'excerpt', 'thumbnail')
         )
     );
+
 }
 
 /**
@@ -95,3 +96,56 @@ function get_all_ratings_for_a_restaurant($postId)
     }
     return $scores;
 }
+
+add_action('acf/input/admin_head', 'display_restaurant_admin_conditional_logic');
+
+function display_restaurant_admin_conditional_logic()
+{
+    ?>
+
+    <style>
+        #acf-prs_restaurant_food, #acf-allykc_restaurant_food, #acf-prs_restaurant_crowd, #acf-allykc_restaurant_crowd {
+            display: none;
+        }
+    </style>
+
+    <script>
+        jQuery(document).live('acf/setup_fields', function (e, postbox) {
+
+                // PRS ratings conditional logic
+                jQuery('a[data-key="field_549313af85ef6"]').click(function (event) {
+                    if (jQuery('#in-category-20').is(':checked')) {
+                        jQuery('#acf-allykc_restaurant_food').hide();
+                        jQuery('#acf-prs_restaurant_food').show();
+                    }
+                    if (jQuery('#in-category-21').is(':checked')) {
+                        jQuery('#acf-allykc_restaurant_crowd').hide();
+                        jQuery('#acf-prs_restaurant_crowd').show();
+                    }
+                });
+
+                // Allykc ratings conditional logic
+                jQuery('a[data-key="field_548a22dacbb7e"]').click(function (event) {
+                    if (jQuery('#in-category-20').is(':checked')) { // if Restaurant
+                        jQuery('#acf-prs_restaurant_food').hide();
+                        jQuery('#acf-allykc_restaurant_food').show();
+                    }
+                    if (jQuery('#in-category-21').is(':checked')) { // if Bar
+                        jQuery('#acf-prs_restaurant_crowd').hide();
+                        jQuery('#acf-allykc_restaurant_crowd').show();
+                    }
+                });
+
+                // Ratings tab
+                jQuery('a[data-key="field_54a9c37379194"]').click(function (event) {
+                    jQuery('#acf-prs_restaurant_food').hide();
+                    jQuery('#acf-allykc_restaurant_food').hide();
+                    jQuery('#acf-prs_restaurant_crowd').hide();
+                    jQuery('#acf-allykc_restaurant_crowd').hide();
+                });
+            }
+        );
+    </script>
+<?php
+}
+
