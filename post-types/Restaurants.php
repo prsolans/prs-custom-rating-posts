@@ -68,7 +68,8 @@ function display_restaurant_table($posts, $username)
 function get_all_ratings_for_a_restaurant($postId)
 {
     // Confirm whether both authors have submitted reviews
-    // TODO: Create more thorough test to confirm if a user has submitted reviews, create a flag for all three or something
+    // TODO: Collect reviews PER AUTHOR
+    // TODO: Account for Crowd review and Food review only being appropriate in certain situations
     $divideBy = 1;
     $scores['incomplete'] = true;
     if (get_field('allykc_restaurant_service', $postId) && get_field('prs_restaurant_service', $postId)) {
@@ -99,6 +100,11 @@ function get_all_ratings_for_a_restaurant($postId)
 
 add_action('acf/input/admin_head', 'display_restaurant_admin_conditional_logic');
 
+
+/**
+ * Control conditional admin elements for Food items based upon category taxonomy selection
+ * TODO: Add click action so that checking category items immediately affects admin field availability (instead of on refresh as currently set up)0
+ */
 function display_restaurant_admin_conditional_logic()
 {
     ?>
@@ -114,11 +120,11 @@ function display_restaurant_admin_conditional_logic()
 
                 // PRS ratings conditional logic
                 jQuery('a[data-key="field_549313af85ef6"]').click(function (event) {
-                    if (jQuery('#in-category-20').is(':checked')) {
+                    if (jQuery('#in-category-20').is(':checked') || jQuery('#in-category-15').is(':checked')) { // if Restaurant OR Quick Eats
                         jQuery('#acf-allykc_restaurant_food').hide();
                         jQuery('#acf-prs_restaurant_food').show();
                     }
-                    if (jQuery('#in-category-21').is(':checked')) {
+                    if (jQuery('#in-category-21').is(':checked')) { // if Bar
                         jQuery('#acf-allykc_restaurant_crowd').hide();
                         jQuery('#acf-prs_restaurant_crowd').show();
                     }
@@ -126,7 +132,7 @@ function display_restaurant_admin_conditional_logic()
 
                 // Allykc ratings conditional logic
                 jQuery('a[data-key="field_548a22dacbb7e"]').click(function (event) {
-                    if (jQuery('#in-category-20').is(':checked')) { // if Restaurant
+                    if (jQuery('#in-category-20').is(':checked') || jQuery('#in-category-15').is(':checked')) { // if Restaurant OR Quick Eats
                         jQuery('#acf-prs_restaurant_food').hide();
                         jQuery('#acf-allykc_restaurant_food').show();
                     }
