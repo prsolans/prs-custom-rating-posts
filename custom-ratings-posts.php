@@ -2,11 +2,11 @@
 /**
  * Plugin Name: AKC/PRS - Custom Ratings Posts
  * Description: Plugin for creating custom post type for rating experiences.
- * Version: 0.2
+ * Version: 0.25
  * Author: prsolans
- * License: Yes, please
+ * License: GPL2
  *
- * Date: 12/14/14
+ * Date: 1/5/15
  * Time: 9:40 PM
  */
 
@@ -54,7 +54,6 @@ function register_location_taxonomy()
 
 /**
  * Collect posts and send to appropriate display function
- *
  * @param string $posttype - Post type for the ratings
  * @param string $username - Author name whose table will be displayes
  */
@@ -77,6 +76,7 @@ function display_user_ratings_table($posttype, $username)
 }
 
 /**
+ * Display To Do and On the Radar right sidebar for categories and post types
  * @param $posttype
  * @param $category
  * @return bool|null
@@ -142,6 +142,7 @@ function display_category_to_do_list($posttype, $category)
 }
 
 /**
+ * Get formatted date for front-end list presentation
  * @param $postID
  * @return null|string
  */
@@ -184,7 +185,7 @@ function get_table_headings($posttype)
 }
 
 /**
- * Get rating names for postype
+ * Get specific rating names for post type
  * @param $posttype
  * @return array
  */
@@ -280,6 +281,13 @@ function get_all_ratings($heading, $ratings, $posttype, $postId)
     return $allScores;
 }
 
+/**
+ * Get custom field ratings from post records
+ * @param $heading
+ * @param $posttype
+ * @param $postId
+ * @return array
+ */
 function get_ratings_for_single_post($heading, $posttype, $postId)
 {
 
@@ -311,6 +319,12 @@ function get_ratings_for_single_post($heading, $posttype, $postId)
     return $scores;
 }
 
+/**
+ * Calculates the individual and combined scores for a post type
+ * @param $scores
+ * @param $ratings
+ * @return array
+ */
 function calculate_post_ratings($scores, $ratings)
 {
     //calculate combined scores
@@ -346,9 +360,10 @@ function calculate_post_ratings($scores, $ratings)
 }
 
 /**
+ * Display sortable table of ratings for a range of different post types
  * @param $posttype
  */
-function display_ratings_listings($posttype)
+function display_ratings_table($posttype)
 {
 
     echo "<div class='two-thirds-left'><h2>Ratings</h2>";
@@ -421,7 +436,8 @@ function display_rating_sidebar($posttype)
 }
 
 /**
- * @param bool $lastMonth
+ * Display ratings for current or previous month
+ * @param bool $lastMonth - if true, display for last month
  */
 function display_recent_ratings($lastMonth = false)
 {
@@ -488,7 +504,7 @@ function display_recent_ratings($lastMonth = false)
 }
 
 /**
- *
+ * Display events marked as upcoming from all custom post types
  */
 function display_upcoming_events()
 {
@@ -518,6 +534,7 @@ function display_upcoming_events()
 }
 
 /**
+ * Get formatted address from the Google Maps field
  * @param $location
  * @return string
  */
