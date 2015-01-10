@@ -472,8 +472,9 @@ function display_recent_ratings($lastMonth = false)
 
         // SORT list items by overallScore
         usort($list, function ($a, $b) {
-            return $b['overallScore'] - $a['overallScore'];
+            return $b['overallScore'] > $a['overallScore'];
         });
+
 
         foreach ($list AS $item) {
             echo "<li><a href='" . $item['link'] . "'> " . $item['title'] . "</a> - " . $item['overallScore'] . "</li>";
