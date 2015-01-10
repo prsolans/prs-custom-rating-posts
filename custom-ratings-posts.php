@@ -438,9 +438,10 @@ function display_recent_ratings($lastMonth = false)
 
     echo "<h2>Best of " . $monthToDisplay . "</h2>";
 
+    //TODO: Include other post types than Restaurant on recent ratings list
     $posts = get_posts(array(
         'numberposts' => 5,
-        'post_type' => array('restaurant', 'experience', 'service', 'shop'),
+        'post_type' => array('restaurant'),
         'meta_query' => array(
             array(
                 'key' => 'status',
@@ -463,11 +464,9 @@ function display_recent_ratings($lastMonth = false)
 
         // CREATE ARRAY of recent ratings posts and details
         foreach ($posts AS $item) {
-            $scores = get_all_ratings_for_a_restaurant($item->ID);
-
             $list[$i]['link'] = get_permalink($item->ID);
             $list[$i]['title'] = $item->post_title;
-            $list[$i]['overallScore'] = $scores['overallScore'];
+            $list[$i]['overallScore'] = get_overall_restaurant_ratings($item->ID);
             $i++;
         }
 

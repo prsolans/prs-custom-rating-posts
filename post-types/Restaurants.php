@@ -91,12 +91,11 @@ function display_restaurant_admin_conditional_logic()
 /**
  * Create array of ratings that have been submitted for a restaurant by a specific author
  * @param $author
+ * @param $postId
  * @return array
  */
-function get_restaurant_ratings_by_author($author)
+function get_restaurant_ratings_by_author($author, $postId)
 {
-
-    $postId = get_the_ID();
 
     $serviceField = $author . '_restaurant_service';
     $foodField = $author . '_restaurant_food';
@@ -127,7 +126,9 @@ function get_restaurant_ratings_by_author($author)
 function display_restaurant_ratings_by_author($author)
 {
 
-    $ratings = get_restaurant_ratings_by_author($author);
+    $postId = get_the_ID();
+
+    $ratings = get_restaurant_ratings_by_author($author, $postId);
 
     echo '<div class="rating-block"><h3>' . strtoupper($author) . ' says</h3>';
 
@@ -145,11 +146,11 @@ function display_restaurant_ratings_by_author($author)
  * Generate overall score based upon all ratings submitted by both authors
  * @return float
  */
-function get_overall_restaurant_ratings()
+function get_overall_restaurant_ratings($postID)
 {
 
-    $prs = get_restaurant_ratings_by_author('prs');
-    $allykc = get_restaurant_ratings_by_author('allykc');
+    $prs = get_restaurant_ratings_by_author('prs', $postID);
+    $allykc = get_restaurant_ratings_by_author('allykc', $postID);
 
     $prsScore = 0;
     $allykcScore = 0;
@@ -201,7 +202,7 @@ function get_overall_restaurant_ratings()
 //
 
 /**
- * UNUSED - Create array of all ratings for a single restaurant
+ * Create array of all ratings for a single restaurant
  * @param $postId
  * @return array
  */
