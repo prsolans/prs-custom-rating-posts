@@ -53,29 +53,6 @@ function register_location_taxonomy()
 }
 
 /**
- * Collect posts and send to appropriate display function
- * @param string $posttype - Post type for the ratings
- * @param string $username - Author name whose table will be displayes
- */
-function display_user_ratings_table($posttype, $username)
-{
-    $posts = get_posts(array(
-        'numberposts' => -1,
-        'post_type' => $posttype
-    ));
-
-    if ($posttype == 'restaurant') {
-        display_restaurant_table($posts, $username);
-    } elseif ($posttype == 'experience') {
-        display_experience_table($posts, $username);
-    } elseif ($posttype == 'shop') {
-        display_shop_table($posts, $username);
-    } elseif ($posttype == 'service') {
-        display_service_table($posts, $username);
-    }
-}
-
-/**
  * Display To Do and On the Radar right sidebar for categories and post types
  * @param $posttype
  * @param $category
@@ -166,13 +143,17 @@ function get_upcoming_post_date($postID)
  * @param $posttype
  * @return array
  */
-function get_table_headings($posttype)
+function get_table_headings($posttype, $category)
 {
 
     $headings = array();
 
     if ($posttype == 'restaurant') {
-        $headings = array('Food', 'Service', 'Ambiance');
+        if ($category == 'Bars') {
+            $headings = array('Service', 'Crowd', 'Ambiance');
+        } else {
+            $headings = array('Food', 'Service', 'Ambiance');
+        }
     } elseif ($posttype == 'experience') {
         $headings = array('Venue', 'Fun', 'Intangibles');
     } elseif ($posttype == 'service') {
@@ -189,12 +170,16 @@ function get_table_headings($posttype)
  * @param $posttype
  * @return array
  */
-function get_posttype_rating_types($posttype)
+function get_posttype_rating_types($posttype, $category)
 {
     $ratings = array();
 
     if ($posttype == 'restaurant') {
-        $ratings = array('foodScore', 'serviceScore', 'ambianceScore');
+        if ($category == 'Bars') {
+            $ratings = array('serviceScore', 'crowdScore', 'ambianceScore');
+        } else {
+            $ratings = array('foodScore', 'serviceScore', 'ambianceScore');
+        }
     } elseif ($posttype == 'experience') {
         $ratings = array('venueScore', 'funScore', 'intangiblesScore');
     } elseif ($posttype == 'service') {
@@ -227,8 +212,8 @@ function display_category_ratings_table($posttype, $category)
 
     $cleanCategory = str_replace(' ', '-', strtolower($category));
 
-    $heading = get_table_headings($posttype);
-    $ratings = get_posttype_rating_types($posttype);
+    $heading = get_table_headings($posttype, $category);
+    $ratings = get_posttype_rating_types($posttype, $category);
 
     if ($posts) {
         echo '<div class="rating-table overall-rating-table">
@@ -244,6 +229,7 @@ function display_category_ratings_table($posttype, $category)
             <tbody>';
         foreach ($posts as $post) {
             $scores = get_all_ratings($heading, $ratings, $posttype, $post->ID);
+
 
             $incomplete = '';
             if ($scores['incomplete'] == true) {
@@ -366,7 +352,7 @@ function calculate_post_ratings($scores, $ratings)
 function display_ratings_table($posttype)
 {
 
-    echo "<div class='two-thirds-left'><h2>Ratings</h2>";
+    echo "<h2>Ratings</h2>";
 
     $catID = get_category_by_slug(get_the_title());
 
@@ -416,9 +402,6 @@ function display_ratings_table($posttype)
     <?php
     }
 
-    ?>
-</div>
-<?php
 }
 
 /**
@@ -562,4 +545,27 @@ function get_location_address($location)
     return $htmlAddress;
 }
 
+
+/**
+ * UNUSED - Collect posts and send to appropriate display function
+ * @param string $posttype - Post type for the ratings
+ * @param string $username - Author name whose table will be displayes
+ */
+//function display_user_ratings_table($posttype, $username)
+//{
+//    $posts = get_posts(array(
+//        'numberposts' => -1,
+//        'post_type' => $posttype
+//    ));
+//
+//    if ($posttype == 'restaurant') {
+//        display_restaurant_table($posts, $username);
+//    } elseif ($posttype == 'experience') {
+//        display_experience_table($posts, $username);
+//    } elseif ($posttype == 'shop') {
+//        display_shop_table($posts, $username);
+//    } elseif ($posttype == 'service') {
+//        display_service_table($posts, $username);
+//    }
+//}
 
