@@ -445,10 +445,10 @@ function display_recent_ratings($lastMonth = false)
     $numericalMonth = date('m');
     $yearToDisplay = date('Y');
 
-    if ($monthToDisplay == 'January') {
-        $yearToDisplay = date('Y', strtotime('-1 years'));
-    }
     if ($lastMonth == true) {
+        if ($monthToDisplay == 'January') {
+            $yearToDisplay = date('Y', strtotime('-1 years'));
+        }
         $monthToDisplay = date('F', strtotime('-1 months'));
         $numericalMonth = date('m', strtotime('-1 months'));
     }
