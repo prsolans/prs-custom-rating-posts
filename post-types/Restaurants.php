@@ -102,6 +102,8 @@ function get_restaurant_ratings_by_author($author, $postId)
     $crowdField = $author . '_restaurant_crowd';
     $ambianceField = $author . '_restaurant_ambiance';
 
+    $ratings = array();
+
     if (get_field($serviceField, $postId)) {
         $ratings['Service'] = get_field($serviceField, $postId);
     }
@@ -130,16 +132,19 @@ function display_restaurant_ratings_by_author($author)
 
     $ratings = get_restaurant_ratings_by_author($author, $postId);
 
-    echo '<div class="rating-block"><h3>' . strtoupper($author) . ' says</h3>';
+    if($ratings) {
 
-    foreach ($ratings AS $key => $value) {
-        echo "<label>";
-        echo $key;
-        echo ":</label>";
-        echo $value;
-        echo "<br/>";
+        echo '<div class="rating-block"><h3>' . strtoupper($author) . ' says</h3>';
+
+        foreach ($ratings AS $key => $value) {
+            echo "<label>";
+            echo $key;
+            echo ":</label>";
+            echo $value;
+            echo "<br/>";
+        }
+        echo '</div>';
     }
-    echo '</div>';
 }
 
 /**
