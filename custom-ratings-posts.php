@@ -573,8 +573,8 @@ function get_foursquare_data($name, $location)
     $query .= 'v=20150110';
     $query .= '&client_id=' . $client_id;
     $query .= '&client_secret=' . $client_secret;
-    $query .= '&near=' . urlencode($location);
-    $query .= '&query=' . urlencode($name);
+    $query .= '&near=' . rawurlencode($location);
+    $query .= '&query=' . rawurlencode($name);
     $query .= '&limit=1';
 
     $result = wp_remote_get($query);
@@ -590,7 +590,10 @@ function get_foursquare_data($name, $location)
 
     if ($data['meta']['code'] == '200') {
         $venue = $data['response']['venues'][0];
-        if ($venue['name'] == $name) {
+//        echo "Name: " . $name;
+//        echo " | VenueName: " . $venue['name'];
+        if (strcmp(html_entity_decode($venue['name']), html_entity_decode($name)) == 0) {
+//            echo " | ***";
             $venueInfo = array();
             if (isset($venue['location']['formattedAddress'][0])) {
                 $venueInfo['streetAddress0'] = $venue['location']['formattedAddress'][0];
