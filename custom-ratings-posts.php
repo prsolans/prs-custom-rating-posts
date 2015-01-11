@@ -13,6 +13,7 @@
 require_once('admin/options.php');
 
 require_once('post-types/Experiences.php');
+//require_once('post-types/Movies.php');
 require_once('post-types/Restaurants.php');
 require_once('post-types/Services.php');
 require_once('post-types/Shops.php');
@@ -545,7 +546,73 @@ function get_location_address($location)
     return $htmlAddress;
 }
 
+function get_location()
+{
 
+    global $post;
+
+    $terms = get_the_terms($post->ID, 'location');
+
+    if (!empty($terms)) {
+        foreach ($terms AS $term) {
+            $location = $term->name;
+        }
+
+        return $location;
+    }
+
+    return false;
+}
+
+function get_foursquare_data($name, $location)
+{
+    $client_id = FOURSQUARE_CLIENT_ID;
+    $client_secret = FOURSQUARE_CLIENT_SECRET;
+
+    $query = 'http://api.foursquare.com/v2/venues/search?';
+    $query .= 'v=20150110';
+    $query .= '&client_id=' . $client_id;
+    $query .= '&client_secret=' . $client_secret;
+    $query .= '&near=' . urlencode($location);
+    $query .= '&query=' . urlencode($name);
+    $query .= '&limit=1';
+
+    $result = wp_remote_get($query);
+    $response = wp_remote_retrieve_body($result);
+
+    $data = json_decode($response, true);
+
+    // debug
+//    echo "<pre>";
+//    print_r($data);
+//    echo "</pre>";
+    // end debug
+
+    if ($data['meta']['code'] == '200') {
+        $venue = $data['response']['venues'][0];
+        if ($venue['name'] == $name) {
+            $venueInfo = array();
+            if (isset($venue['location']['formattedAddress'][0])) {
+                $venueInfo['streetAddress0'] = $venue['location']['formattedAddress'][0];
+            }
+            if (isset($venue['location']['formattedAddress'][1])) {
+                $venueInfo['streetAddress1'] = $venue['location']['formattedAddress'][1];
+            }
+            if (isset($venue['location']['formattedAddress'][2])) {
+                $venueInfo['streetAddress2'] = $venue['location']['formattedAddress'][2];
+            }
+            if (isset($venue['url'])) {
+                $venueInfo['url'] = $venue['url'];
+            }
+            if (isset($venue['reservations']['url'])) {
+                $venueInfo['reservations'] = $venue['reservations']['url'];
+            }
+            return $venueInfo;
+        }
+    }
+
+    return false;
+}
 /**
  * UNUSED - Collect posts and send to appropriate display function
  * @param string $posttype - Post type for the ratings
