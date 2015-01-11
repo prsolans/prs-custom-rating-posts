@@ -441,7 +441,7 @@ function display_recent_ratings($lastMonth = false)
 
     //TODO: Include other post types than Restaurant on recent ratings list
     $posts = get_posts(array(
-        'numberposts' => 5,
+        'numberposts' => -1,
         'post_type' => array('restaurant'),
         'meta_query' => array(
             array(
@@ -476,6 +476,7 @@ function display_recent_ratings($lastMonth = false)
             return $b['overallScore'] > $a['overallScore'];
         });
 
+        $list = array_slice($list, 0, 5, true);
 
         foreach ($list AS $item) {
             echo "<li><a href='" . $item['link'] . "'> " . $item['title'] . "</a> - " . $item['overallScore'] . "</li>";
