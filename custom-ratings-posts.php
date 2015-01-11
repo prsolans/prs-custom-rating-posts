@@ -565,6 +565,25 @@ function get_location()
     return false;
 }
 
+function get_posttype_category()
+{
+    global $post;
+
+    $terms = get_the_terms($post->ID, 'category');
+
+    if (!empty($terms)) {
+        foreach ($terms AS $term) {
+            if($term->parent == 0) {
+                $category = $term->name;
+            }
+        }
+
+        return $category;
+    }
+
+    return false;
+}
+
 function get_foursquare_data($name, $location)
 {
     $client_id = FOURSQUARE_CLIENT_ID;
