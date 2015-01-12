@@ -617,6 +617,10 @@ function get_foursquare_data($name, $location)
         if (strcmp(html_entity_decode($venue['name']), html_entity_decode($name)) == 0) {
 
             $venueInfo = array();
+            if(isset($venue['location']['lat'])){
+                $venueInfo['lat'] = $venue['location']['lat'];
+                $venueInfo['lng'] = $venue['location']['lng'];
+            }
             if (isset($venue['location']['formattedAddress'][0])) {
                 $venueInfo['streetAddress0'] = $venue['location']['formattedAddress'][0];
             }
