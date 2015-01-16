@@ -465,7 +465,7 @@ function display_recent_ratings($lastMonth = false)
 
         // CREATE ARRAY of recent ratings posts and details
         foreach ($posts AS $item) {
-            if(get_overall_restaurant_ratings($item->ID)) {
+            if (get_overall_restaurant_ratings($item->ID)) {
                 $list[$i]['link'] = get_permalink($item->ID);
                 $list[$i]['title'] = $item->post_title;
                 $list[$i]['overallScore'] = get_overall_restaurant_ratings($item->ID);
@@ -575,7 +575,7 @@ function get_posttype_category()
 
     if (!empty($terms)) {
         foreach ($terms AS $term) {
-            if($term->parent == 0) {
+            if ($term->parent == 0) {
                 $category = $term->name;
             }
         }
@@ -589,23 +589,24 @@ function get_posttype_category()
 /**
  * Defines the function used to initial the cURL library.
  *
- * @param  string  $url        To URL to which the request is being made
+ * @param  string $url To URL to which the request is being made
  * @return string  $response   The response, if available; otherwise, null
  */
-function curl( $url ) {
+function curl($url)
+{
 
-    $curl = curl_init( $url );
+    $curl = curl_init($url);
 
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_HEADER, 0 );
-    curl_setopt( $curl, CURLOPT_USERAGENT, '' );
-    curl_setopt( $curl, CURLOPT_TIMEOUT, 10 );
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_HEADER, 0);
+    curl_setopt($curl, CURLOPT_USERAGENT, '');
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
 
-    $response = curl_exec( $curl );
-    if( 0 !== curl_errno( $curl ) || 200 !== curl_getinfo( $curl, CURLINFO_HTTP_CODE ) ) {
+    $response = curl_exec($curl);
+    if (0 !== curl_errno($curl) || 200 !== curl_getinfo($curl, CURLINFO_HTTP_CODE)) {
         $response = null;
     } // end if
-    curl_close( $curl );
+    curl_close($curl);
 
     return $response;
 
@@ -616,6 +617,7 @@ function get_foursquare_data($name, $location)
     $client_id = FOURSQUARE_CLIENT_ID;
     $client_secret = FOURSQUARE_CLIENT_SECRET;
 
+    // Search query
     $query = 'http://api.foursquare.com/v2/venues/search?';
     $query .= 'v=20150115';
     $query .= '&intent=browse';
@@ -625,28 +627,7 @@ function get_foursquare_data($name, $location)
     $query .= '&query=' . rawurlencode($name);
     $query .= '&limit=1';
 
-    debug_to_console($query);
-
-    debug_to_console("wp_remote_get attempt...");
-    $result = wp_remote_get($query);
-
-    if(is_wp_error($result)){
-        debug_to_console("file_get_contents attempt...");
-        $result = file_get_contents($query);
-        if($result == false){
-            // And if that doesn't work, then we'll try curl
-            debug_to_console("curl attempt...");
-            $result = $this->curl( $query );
-            if( null == $result ) {
-                $result = 0;
-            } // end if/else
-        }
-        $data = json_decode($result, true);
-    }
-    else {
-        $response = wp_remote_retrieve_body($result);
-        $data = json_decode($response, true);
-    }
+    $data = get_external_data($query);
     // debug
 //    echo "<pre>";
 //    print_r($data);
@@ -659,7 +640,7 @@ function get_foursquare_data($name, $location)
         if (strcmp(html_entity_decode($venue['name']), html_entity_decode($name)) == 0) {
 
             $venueInfo = array();
-            if(isset($venue['location']['lat'])){
+            if (isset($venue['location']['lat'])) {
                 $venueInfo['lat'] = $venue['location']['lat'];
                 $venueInfo['lng'] = $venue['location']['lng'];
             }
@@ -678,11 +659,62 @@ function get_foursquare_data($name, $location)
             if (isset($venue['reservations']['url'])) {
                 $venueInfo['reservations'] = $venue['reservations']['url'];
             }
+            if (isset($venue['id'])) {
+                $q2 = 'http://api.foursquare.com/v2/venues/' . $venue['id'];
+                $q2 .= '?v=20150115';
+                $q2 .= '&client_id=' . $client_id;
+                $q2 .= '&client_secret=' . $client_secret;
+                $data = get_external_data($q2);
+
+                if ($data['meta']['code'] == '200') {
+                    $venueImages = $data['response']['venue']['photos']['groups'];
+
+                    debug_to_console($venueImages[0]['count']);
+
+                    if($venueImages[0]['count']<3) {
+                        $picturesToShow = $venueImages[0]['count'];
+                    }
+                    else { $picturesToShow = 2; }
+
+
+                    for ($picturesToShow; $picturesToShow > -1; $picturesToShow--) {
+                        $path = $venueImages[0]['items'][$picturesToShow]['prefix'] . '250x250' . $venueImages[0]['items'][$picturesToShow]['suffix'];
+                        echo "<img class='fs-image' src='" . $path . "'/>";
+                    }
+                }
+            }
             return $venueInfo;
         }
     }
 
     return false;
+}
+
+function get_external_data($query)
+{
+    debug_to_console($query);
+
+    debug_to_console("wp_remote_get attempt...");
+    $result = wp_remote_get($query);
+
+    if (is_wp_error($result)) {
+        debug_to_console("file_get_contents attempt...");
+        $result = file_get_contents($query);
+        if ($result == false) {
+            // And if that doesn't work, then we'll try curl
+            debug_to_console("curl attempt...");
+            $result = $this->curl($query);
+            if (null == $result) {
+                $result = 0;
+            } // end if/else
+        }
+        $data = json_decode($result, true);
+    } else {
+        $response = wp_remote_retrieve_body($result);
+        $data = json_decode($response, true);
+    }
+
+    return $data;
 }
 /**
  * UNUSED - Collect posts and send to appropriate display function
