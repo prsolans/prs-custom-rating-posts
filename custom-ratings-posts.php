@@ -465,10 +465,12 @@ function display_recent_ratings($lastMonth = false)
 
         // CREATE ARRAY of recent ratings posts and details
         foreach ($posts AS $item) {
-            $list[$i]['link'] = get_permalink($item->ID);
-            $list[$i]['title'] = $item->post_title;
-            $list[$i]['overallScore'] = get_overall_restaurant_ratings($item->ID);
-            $i++;
+            if(get_overall_restaurant_ratings($item->ID)) {
+                $list[$i]['link'] = get_permalink($item->ID);
+                $list[$i]['title'] = $item->post_title;
+                $list[$i]['overallScore'] = get_overall_restaurant_ratings($item->ID);
+                $i++;
+            }
         }
 
         // SORT list items by overallScore
@@ -584,13 +586,38 @@ function get_posttype_category()
     return false;
 }
 
+/**
+ * Defines the function used to initial the cURL library.
+ *
+ * @param  string  $url        To URL to which the request is being made
+ * @return string  $response   The response, if available; otherwise, null
+ */
+function curl( $url ) {
+
+    $curl = curl_init( $url );
+
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_HEADER, 0 );
+    curl_setopt( $curl, CURLOPT_USERAGENT, '' );
+    curl_setopt( $curl, CURLOPT_TIMEOUT, 10 );
+
+    $response = curl_exec( $curl );
+    if( 0 !== curl_errno( $curl ) || 200 !== curl_getinfo( $curl, CURLINFO_HTTP_CODE ) ) {
+        $response = null;
+    } // end if
+    curl_close( $curl );
+
+    return $response;
+
+} // end curl
+
 function get_foursquare_data($name, $location)
 {
     $client_id = FOURSQUARE_CLIENT_ID;
     $client_secret = FOURSQUARE_CLIENT_SECRET;
 
     $query = 'http://api.foursquare.com/v2/venues/search?';
-    $query .= 'v=20150110';
+    $query .= 'v=20150115';
     $query .= '&intent=browse';
     $query .= '&client_id=' . $client_id;
     $query .= '&client_secret=' . $client_secret;
@@ -598,13 +625,28 @@ function get_foursquare_data($name, $location)
     $query .= '&query=' . rawurlencode($name);
     $query .= '&limit=1';
 
-//    echo $query;
+    debug_to_console($query);
 
+    debug_to_console("wp_remote_get attempt...");
     $result = wp_remote_get($query);
-    $response = wp_remote_retrieve_body($result);
 
-    $data = json_decode($response, true);
-
+    if(is_wp_error($result)){
+        debug_to_console("file_get_contents attempt...");
+        $result = file_get_contents($query);
+        if($result == false){
+            // And if that doesn't work, then we'll try curl
+            debug_to_console("curl attempt...");
+            $result = $this->curl( $query );
+            if( null == $result ) {
+                $result = 0;
+            } // end if/else
+        }
+        $data = json_decode($result, true);
+    }
+    else {
+        $response = wp_remote_retrieve_body($result);
+        $data = json_decode($response, true);
+    }
     // debug
 //    echo "<pre>";
 //    print_r($data);

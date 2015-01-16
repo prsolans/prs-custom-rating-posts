@@ -168,9 +168,12 @@ function get_overall_restaurant_ratings($postID)
         $allykcScore = $allykcScore + $rating;
     }
 
-    $overallScore = round(($prsScore + $allykcScore) / (count($prs) + count($allykc)), 1);
+    if((count($prs) + count($allykc)) > 0) {
+        $overallScore = round(($prsScore + $allykcScore) / (count($prs) + count($allykc)), 1);
+        return $overallScore;
+    }
 
-    return $overallScore;
+    return false;
 }
 
 
