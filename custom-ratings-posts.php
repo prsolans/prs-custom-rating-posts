@@ -465,10 +465,11 @@ function display_recent_ratings($lastMonth = false)
 
         // CREATE ARRAY of recent ratings posts and details
         foreach ($posts AS $item) {
-            if (get_overall_restaurant_ratings($item->ID)) {
+            if (get_overall_restaurant_ratings($item->ID) != false) {
+                $ratings = get_overall_restaurant_ratings($item->ID);
                 $list[$i]['link'] = get_permalink($item->ID);
                 $list[$i]['title'] = $item->post_title;
-                $list[$i]['overallScore'] = get_overall_restaurant_ratings($item->ID);
+                $list[$i]['overallScore'] = $ratings['overallScore'];
                 $i++;
             }
         }

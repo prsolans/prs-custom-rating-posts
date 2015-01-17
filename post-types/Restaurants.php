@@ -160,6 +160,9 @@ function get_overall_restaurant_ratings($postID)
     $prsScore = 0;
     $allykcScore = 0;
 
+    $ratings = array();
+    $ratings['count'] = 0;
+
     foreach ($prs AS $rating) {
         $prsScore = $prsScore + $rating;
     }
@@ -169,8 +172,10 @@ function get_overall_restaurant_ratings($postID)
     }
 
     if((count($prs) + count($allykc)) > 0) {
-        $overallScore = round(($prsScore + $allykcScore) / (count($prs) + count($allykc)), 1);
-        return $overallScore;
+        if(count($prs) > 0){ $ratings['count']++;}
+        if(count($allykc) > 0){ $ratings['count']++;}
+        $ratings['overallScore'] = round(($prsScore + $allykcScore) / (count($prs) + count($allykc)), 1);
+        return $ratings;
     }
 
     return false;
