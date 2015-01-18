@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AKC/PRS - Custom Ratings Posts
  * Description: Plugin for creating custom post type for rating experiences.
- * Version: 0.25
+ * Version: 0.35
  * Author: prsolans
  * License: GPL2
  *
@@ -13,7 +13,7 @@
 require_once('admin/options.php');
 
 require_once('post-types/Experiences.php');
-//require_once('post-types/Movies.php');
+require_once('post-types/Movies.php');
 require_once('post-types/Restaurants.php');
 require_once('post-types/Services.php');
 require_once('post-types/Shops.php');
@@ -161,6 +161,8 @@ function get_table_headings($posttype, $category)
         $headings = array('Ease', 'Quality', 'People');
     } elseif ($posttype == 'shop') {
         $headings = array('Ease', 'Quality', 'Ambiance');
+    } elseif ($posttype == 'movie') {
+        $headings = array('Rating');
     }
 
     return $headings;
@@ -187,6 +189,8 @@ function get_posttype_rating_types($posttype, $category)
         $ratings = array('easeScore', 'qualityScore', 'peopleScore');
     } elseif ($posttype == 'shop') {
         $ratings = array('easeScore', 'qualityScore', 'ambianceScore');
+    } elseif ($posttype == 'movie') {
+        $ratings = array('ratingScore');
     }
 
     return $ratings;
@@ -197,7 +201,7 @@ function get_posttype_rating_types($posttype, $category)
  * @param string $posttype - Name of custom posttype being requested
  * @param string $category - Name of category name being requested
  */
-function display_category_ratings_table($posttype, $category)
+function  display_category_ratings_table($posttype, $category)
 {
     $posts = get_posts(array(
         'numberposts' => -1,
@@ -221,31 +225,33 @@ function display_category_ratings_table($posttype, $category)
         <table id="overallScores-' . $cleanCategory . '" class="tablesorter">
             <thead>
                 <th>' . $category . '</th>
-                <th class="center">Overall</th>
-                <th class="center collapsible">' . $heading[0] . '</th>
-                <th class="center collapsible">' . $heading[1] . '</th>
-                <th class="center collapsible">' . $heading[2] . '</th>
-                <th class="center collapsible">Date</th>
-            </thead>
-            <tbody>';
+                <th class="center">Overall</th>';
+        if ($posttype != 'movie') {
+            echo '<th class="center collapsible" > ' . $heading[0] . '</th><th class="center collapsible" > ' . $heading[1] . '</th><th class="center collapsible" > ' . $heading[2] . '</th>';
+        }
+        echo '<th class="center collapsible"> Date</th>
+            </thead >
+            <tbody > ';
         foreach ($posts as $post) {
             $scores = get_all_ratings($heading, $ratings, $posttype, $post->ID);
 
 
             $incomplete = '';
             if ($scores['incomplete'] == true) {
-                $incomplete = '*';
+                $incomplete = ' * ';
             }
 
-            echo '<tr ><td class="name-cell"><a href = "' . get_permalink($post->ID) . '" > ' . get_the_title($post->ID) . $incomplete . '</a ></td >';
-            echo '<td class="center">' . $scores['overallScore'] . '</td >';
-            echo '<td class="center collapsible">' . $scores[$ratings[0]] . '</td >';
-            echo '<td class="center collapsible">' . $scores[$ratings[1]] . '</td >';
-            echo '<td class="center collapsible">' . $scores[$ratings[2]] . '</td >';
-            echo '<td class="center collapsible">' . get_the_date('m/d/y', $post->ID) . '</td ></tr >';
+            echo '<tr><td class="name-cell" ><a href = "' . get_permalink($post->ID) . '" > ' . get_the_title($post->ID) . $incomplete . '</a ></td>';
+            echo '<td class="center" > ' . $scores['overallScore'] . ' </td > ';
+            if ($posttype != 'movie') {
+                echo '<td class="center collapsible" > ' . $scores[$ratings[0]] . '</td > ';
+                echo '<td class="center collapsible" > ' . $scores[$ratings[1]] . '</td > ';
+                echo '<td class="center collapsible" > ' . $scores[$ratings[2]] . '</td > ';
+            }
+            echo '<td class="center collapsible" > ' . get_the_date('m / d / y', $post->ID) . ' </td ></tr>';
         }
 
-        echo '</tbody></table><label>* - complete ratings to come</label></div>';
+        echo '</tbody ></table ><label >* -complete ratings to come </label ></div > ';
     } else {
         return false;
     }
@@ -263,7 +269,11 @@ function get_all_ratings($heading, $ratings, $posttype, $postId)
 
     $scores = get_ratings_for_single_post($heading, $posttype, $postId);
 
-    $allScores = calculate_post_ratings($scores, $ratings);
+    if ($posttype != 'movie') {
+        $allScores = calculate_post_ratings($scores, $ratings);
+    } else {
+        $allScores = calculate_movie_rating($scores, $ratings);
+    }
 
     return $allScores;
 }
@@ -284,10 +294,11 @@ function get_ratings_for_single_post($heading, $posttype, $postId)
 
     foreach ($authors as $author) {
         array_push($fieldnames, $author . '_' . $posttype . '_' . strtolower($heading[0]));
-        array_push($fieldnames, $author . '_' . $posttype . '_' . strtolower($heading[1]));
-        array_push($fieldnames, $author . '_' . $posttype . '_' . strtolower($heading[2]));
+        if ($posttype != 'movie') {
+            array_push($fieldnames, $author . '_' . $posttype . '_' . strtolower($heading[1]));
+            array_push($fieldnames, $author . '_' . $posttype . '_' . strtolower($heading[2]));
+        }
     }
-
     $ratingsSubmitted = 0;
 
     $scores = array();
@@ -335,14 +346,25 @@ function calculate_post_ratings($scores, $ratings)
         $calculatedScores['overallScore'] = round($totalScore / 3, 1);
         $calculatedScores['incomplete'] = true;
     } else {
-        $calculatedScores[$ratings[0]] = '*';
-        $calculatedScores[$ratings[1]] = '*';
-        $calculatedScores[$ratings[2]] = '*';
-        $calculatedScores['totalScore'] = '*';
-        $calculatedScores['overallScore'] = '*';
+        $calculatedScores[$ratings[0]] = ' * ';
+        $calculatedScores[$ratings[1]] = ' * ';
+        $calculatedScores[$ratings[2]] = ' * ';
+        $calculatedScores['totalScore'] = ' * ';
+        $calculatedScores['overallScore'] = ' * ';
         $calculatedScores['incomplete'] = true;
     }
 
+    return $calculatedScores;
+}
+
+function calculate_movie_rating($scores, $ratings)
+{
+    $calculatedScores['overallScore'] = $scores[0];
+    $calculatedScores['incomplete'] = false;
+    if ($scores['count'] == 2) {
+        $calculatedScores['overallScore'] = ($scores[0] + $scores[1]) / 2;
+        $calculatedScores['incomplete'] = false;
+    }
     return $calculatedScores;
 }
 
@@ -365,7 +387,7 @@ function display_ratings_table($posttype)
         );
 
         $category = get_categories($args);
-
+        debug_to_console($category);
         if ($category) {
 
             foreach ($category AS $item) {
@@ -373,7 +395,7 @@ function display_ratings_table($posttype)
                 ?>
                 <script>
                     jQuery(document).ready(function () {
-                            jQuery("#overallScores-<?php echo str_replace(' ', '-', strtolower($item->cat_name)); ?>").tablesorter({sortList: [[1, 1]]});
+                            jQuery("#overallScores-<?php echo str_replace(' ', ' - ', strtolower($item->cat_name)); ?>").tablesorter({sortList: [[1, 1]]});
                         }
                     );
                 </script>
@@ -412,7 +434,7 @@ function display_ratings_table($posttype)
 function display_rating_sidebar($posttype)
 {
 
-    echo '<div class="one-third-right">';
+    echo '<div class="one-third-right" >';
 
     display_category_to_do_list($posttype, get_the_title());
 
@@ -431,10 +453,10 @@ function display_recent_ratings($lastMonth = false)
 
     if ($lastMonth == true) {
         if ($monthToDisplay == 'January') {
-            $yearToDisplay = date('Y', strtotime('-1 years'));
+            $yearToDisplay = date('Y', strtotime(' - 1 years'));
         }
-        $monthToDisplay = date('F', strtotime('-1 months'));
-        $numericalMonth = date('m', strtotime('-1 months'));
+        $monthToDisplay = date('F', strtotime(' - 1 months'));
+        $numericalMonth = date('m', strtotime(' - 1 months'));
     }
 
     echo "<h2>Best of " . $monthToDisplay . "</h2>";
@@ -537,7 +559,7 @@ function get_location_address($location)
         $count = count($lines);
 
         for ($i = 0; $i < ($count - 3); $i++) {
-            $htmlAddress .= $lines[$i] . '<br/>';
+            $htmlAddress .= $lines[$i] . ' < br />';
 
         }
 
@@ -668,19 +690,24 @@ function get_foursquare_data($name, $location)
                 $data = get_external_data($q2);
 
                 if ($data['meta']['code'] == '200') {
+
                     $venueImages = $data['response']['venue']['photos']['groups'];
 
-                    debug_to_console($venueImages[0]['count']);
-
-                    if($venueImages[0]['count']<3) {
+                    if ($venueImages[0]['count'] < 3) {
                         $picturesToShow = $venueImages[0]['count'];
+                    } else {
+                        $picturesToShow = 2;
                     }
-                    else { $picturesToShow = 2; }
-
-
                     for ($picturesToShow; $picturesToShow > -1; $picturesToShow--) {
                         $path = $venueImages[0]['items'][$picturesToShow]['prefix'] . '250x250' . $venueImages[0]['items'][$picturesToShow]['suffix'];
                         echo "<img class='fs-image' src='" . $path . "'/>";
+                    }
+
+                    if (isset($data['response']['venue']['rating'])) {
+                        $venueInfo['rating'] = $data['response']['venue']['rating'];
+                    }
+                    if (isset($data['response']['venue']['ratingSignals'])) {
+                        $venueInfo['ratingSignals'] = $data['response']['venue']['ratingSignals'];
                     }
                 }
             }
@@ -689,6 +716,42 @@ function get_foursquare_data($name, $location)
     }
 
     return false;
+}
+
+function randString($length, $charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+{
+    $str = '';
+    $count = strlen($charset);
+    while ($length--) {
+        $str .= $charset[mt_rand(0, $count - 1)];
+    }
+    return $str;
+}
+
+function get_yelp_data($name, $location)
+{
+    $client_id = YELP_CONSUMER_KEY;
+    $client_secret = YELP_CONSUMER_SECRET;
+    $client_token = YELP_TOKEN;
+    $client_token_secret = YELP_TOKEN_SECRET;
+
+    $query_timestamp = time();
+    $signature_method = 'HMAC-SHA1';
+    $generated_nonce = randString('9');
+
+    // Search query
+    $query = 'http://api.yelp.com/v2/search?';
+    $query .= '&oauth_consumer_key=' . $client_id;
+    $query .= '&oauth_token=' . $client_token;
+    $query .= '&oauth_signature_method=' . $signature_method;
+    $query .= '&oauth_signature=' . $client_secret;
+    $query .= '&oauth_timestamp=' . $query_timestamp;
+    $query .= '&oauth_nonce=' . $generated_nonce;
+    $query .= '&location=' . rawurlencode($location);
+    $query .= '&term=' . rawurlencode($name);
+    $query .= '&limit=1';
+
+    debug_to_console($query);
 }
 
 function get_external_data($query)
