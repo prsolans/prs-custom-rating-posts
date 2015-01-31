@@ -581,7 +581,9 @@ function get_location()
 
     if (!empty($terms)) {
         foreach ($terms AS $term) {
-            $location = $term->name;
+            if ($term->parent == 0) {
+                $location = $term->name;
+            }
         }
 
         return $location;
