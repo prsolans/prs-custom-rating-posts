@@ -721,29 +721,6 @@ function get_foursquare_data($name, $location)
     return false;
 }
 
-function randString($length, $charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
-{
-    $str = '';
-    $count = strlen($charset);
-    while ($length--) {
-        $str .= $charset[mt_rand(0, $count - 1)];
-    }
-    return $str;
-}
-
-$CONSUMER_KEY = YELP_CONSUMER_KEY;
-$CONSUMER_SECRET = YELP_CONSUMER_SECRET;
-$TOKEN = YELP_TOKEN;
-$TOKEN_SECRET = YELP_TOKEN_SECRET;
-
-
-$API_HOST = 'api.yelp.com';
-//$DEFAULT_TERM = 'dinner';
-//$DEFAULT_LOCATION = 'San Francisco, CA';
-$SEARCH_LIMIT = 1;
-$SEARCH_PATH = '/v2/search';
-$BUSINESS_PATH = '/v2/business';
-
 /**
  * Makes a request to the Yelp API and returns the response
  *
@@ -751,17 +728,18 @@ $BUSINESS_PATH = '/v2/business';
  * @param    $path    The path of the APi after the domain
  * @return   The JSON response from the request
  */
-function request($host, $path) {
+function yelp_api_request($host, $path) {
     $unsigned_url = "http://" . $host . $path;
-    // Token object built using the OAuth library
-    $token = new OAuthToken($GLOBALS['TOKEN'], $GLOBALS['TOKEN_SECRET']);
 
-    debug_to_console($token);
+    // Token object built using the OAuth library
+    $token = new OAuthToken(YELP_TOKEN, YELP_TOKEN_SECRET);
+
     // Consumer object built using the OAuth library
-    $consumer = new OAuthConsumer($GLOBALS['CONSUMER_KEY'], $GLOBALS['CONSUMER_SECRET']);
-    debug_to_console($consumer);
+    $consumer = new OAuthConsumer(YELP_CONSUMER_KEY, YELP_CONSUMER_SECRET);
+
     // Yelp uses HMAC SHA1 encoding
     $signature_method = new OAuthSignatureMethod_HMAC_SHA1();
+
     $oauthrequest = OAuthRequest::from_consumer_and_token(
         $consumer,
         $token,
@@ -775,17 +753,11 @@ function request($host, $path) {
     // Get the signed URL
     $signed_url = $oauthrequest->to_url();
 
-    debug_to_console($signed_url);
-
-    // Send Yelp API Call
-    $ch = curl_init($signed_url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    $data = curl_exec($ch);
-    curl_close($ch);
+    $data = get_external_data($signed_url);
 
     return $data;
 }
+
 /**
  * Query the Search API by a search term and location
  *
@@ -793,90 +765,32 @@ function request($host, $path) {
  * @param    $location    The search location passed to the API
  * @return   The JSON response from the request
  */
-function search($term, $location) {
+function yelp_api_search($term, $location) {
     $url_params = array();
 
-    $url_params['term'] = $term ?: $GLOBALS['DEFAULT_TERM'];
-    $url_params['location'] = $location?: $GLOBALS['DEFAULT_LOCATION'];
-    $url_params['limit'] = $GLOBALS['SEARCH_LIMIT'];
-    $search_path = $GLOBALS['SEARCH_PATH'] . "?" . http_build_query($url_params);
+    $url_params['term'] = $term;
+    $url_params['location'] = $location;
+    $url_params['limit'] = 1;
+    $search_path = "/v2/search" . "?" . http_build_query($url_params);
 
-    debug_to_console($search_path);
-
-    return request($GLOBALS['API_HOST'], $search_path);
+    return yelp_api_request('api.yelp.com', $search_path);
 }
-/**
- * Query the Business API by business_id
- *
- * @param    $business_id    The ID of the business to query
- * @return   The JSON response from the request
- */
-function get_business($business_id) {
-    $business_path = $GLOBALS['BUSINESS_PATH'] . $business_id;
 
-    return request($GLOBALS['API_HOST'], $business_path);
-}
 /**
- * Queries the API by the input values from the user
+ * Queries the API by the input values from the page
  *
  * @param    $term        The search term to query
  * @param    $location    The location of the business to query
  */
-function query_api($term, $location) {
-    $response = json_decode(search($term, $location));
-    $business_id = $response->businesses[0]->id;
-
-    print sprintf(
-        "%d businesses found, querying business info for the top result \"%s\"\n\n",
-        count($response->businesses),
-        $business_id
-    );
-
-    $response = get_business($business_id);
-
-    print sprintf("Result for business \"%s\" found:\n", $business_id);
-    print "$response\n";
-}
-
-function get_yelp_data($name, $location)
-{
-
-
-
-    $location = rawurlencode($location);
-    $term = rawurlencode($name);
-
-    debug_to_console($location . '-' . $term);
-
-//    $client_id = YELP_CONSUMER_KEY;
-//    $client_secret = YELP_CONSUMER_SECRET;
-//    $client_token = YELP_TOKEN;
-//    $client_token_secret = YELP_TOKEN_SECRET;
-
-//    $query_timestamp = time();
-//    $signature_method = 'HMAC-SHA1';
-//    $generated_nonce = randString('9');
-//
-//    // Search query
-//    $query = 'http://api.yelp.com/v2/search?';
-//    $query .= '&oauth_consumer_key=' . $client_id;
-//    $query .= '&oauth_token=' . $client_token;
-//    $query .= '&oauth_signature_method=' . $signature_method;
-//    $query .= '&oauth_signature=' . $client_secret;
-//    $query .= '&oauth_timestamp=' . $query_timestamp;
-//    $query .= '&oauth_nonce=' . $generated_nonce;
-//    $query .= '&location=' . rawurlencode($location);
-//    $query .= '&term=' . rawurlencode($name);
-//    $query .= '&limit=1';
-
-    query_api($term, $location);
-
-  //  debug_to_console($query);
+function get_yelp_data($term, $location) {
+    $response = yelp_api_search($term, $location);
+    $thisPlace = $response['businesses'][0];
+    return $thisPlace;
 }
 
 function get_external_data($query)
 {
-    debug_to_console($query);
+    debug_to_console('Q: '. $query);
 
     debug_to_console("wp_remote_get attempt...");
     $result = wp_remote_get($query);
