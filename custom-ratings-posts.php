@@ -612,31 +612,38 @@ function get_posttype_category()
     return false;
 }
 
-/**
- * Defines the function used to initial the cURL library.
- *
- * @param  string $url To URL to which the request is being made
- * @return string  $response   The response, if available; otherwise, null
- */
-function curl($url)
+function get_weighted_score($us, $fs, $fsRatings, $yelp, $yelpRatings)
 {
+    $overallScore = 0;
+    $ourScoreMultiplier = 1;
+    // Balance FS & Yelp based on review counts
+    $externalReviews = $fsRatings + $yelpRatings;
+    if ($fsRatings > 0) {
+        $fsScore = $fs * $fsRatings;
+        $overallScore += $fsScore;
+        debug_to_console('FS:' . $fsScore);
 
-    $curl = curl_init($url);
+    }
+    if ($yelpRatings > 0) {
+        $yelpScore = $yelp * $yelpRatings * 2; // x2 accounts for 5-star scale
+        $overallScore += $yelpScore;
+        debug_to_console('Y:' . $yelpScore);
 
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($curl, CURLOPT_HEADER, 0);
-    curl_setopt($curl, CURLOPT_USERAGENT, '');
-    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+    }
+    // Add our rating to equation, weighted as equal to ALL external ratings
+    if ($us > 0 && $externalReviews > 0) {
+        $ourScore = $us * $externalReviews;
+        $overallScore += $ourScore;
+        $ourScoreMultiplier = 2;
+        debug_to_console('US:' . $ourScore);
 
-    $response = curl_exec($curl);
-    if (0 !== curl_errno($curl) || 200 !== curl_getinfo($curl, CURLINFO_HTTP_CODE)) {
-        $response = null;
-    } // end if
-    curl_close($curl);
+    }
 
-    return $response;
 
-} // end curl
+    $weightedScore = $overallScore / ($externalReviews * $ourScoreMultiplier);
+
+    return round($weightedScore, 2);
+}
 
 function get_foursquare_data($name, $location)
 {
@@ -722,13 +729,54 @@ function get_foursquare_data($name, $location)
 }
 
 /**
+ * Queries the API by the input values from the page
+ *
+ * @param    $term        The search term to query
+ * @param    $location    The location of the business to query
+ */
+function get_yelp_data($term, $location)
+{
+    $response = yelp_api_search($term, $location);
+    $thisPlace = $response['businesses'][0];
+    return $thisPlace;
+}
+
+function get_external_data($query)
+{
+    debug_to_console('Q: ' . $query);
+
+    debug_to_console("wp_remote_get attempt...");
+    $result = wp_remote_get($query);
+
+    if (is_wp_error($result)) {
+        debug_to_console("file_get_contents attempt...");
+        $result = file_get_contents($query);
+        if ($result == false) {
+            // And if that doesn't work, then we'll try curl
+            debug_to_console("curl attempt...");
+            $result = $this->curl($query);
+            if (null == $result) {
+                $result = 0;
+            } // end if/else
+        }
+        $data = json_decode($result, true);
+    } else {
+        $response = wp_remote_retrieve_body($result);
+        $data = json_decode($response, true);
+    }
+
+    return $data;
+}
+
+/**
  * Makes a request to the Yelp API and returns the response
  *
  * @param    $host    The domain host of the API
  * @param    $path    The path of the APi after the domain
  * @return   The JSON response from the request
  */
-function yelp_api_request($host, $path) {
+function yelp_api_request($host, $path)
+{
     $unsigned_url = "http://" . $host . $path;
 
     // Token object built using the OAuth library
@@ -765,7 +813,8 @@ function yelp_api_request($host, $path) {
  * @param    $location    The search location passed to the API
  * @return   The JSON response from the request
  */
-function yelp_api_search($term, $location) {
+function yelp_api_search($term, $location)
+{
     $url_params = array();
 
     $url_params['term'] = $term;
@@ -776,44 +825,33 @@ function yelp_api_search($term, $location) {
     return yelp_api_request('api.yelp.com', $search_path);
 }
 
+
 /**
- * Queries the API by the input values from the page
+ * Defines the function used to initial the cURL library.
  *
- * @param    $term        The search term to query
- * @param    $location    The location of the business to query
+ * @param  string $url To URL to which the request is being made
+ * @return string  $response   The response, if available; otherwise, null
  */
-function get_yelp_data($term, $location) {
-    $response = yelp_api_search($term, $location);
-    $thisPlace = $response['businesses'][0];
-    return $thisPlace;
-}
-
-function get_external_data($query)
+function curl($url)
 {
-    debug_to_console('Q: '. $query);
 
-    debug_to_console("wp_remote_get attempt...");
-    $result = wp_remote_get($query);
+    $curl = curl_init($url);
 
-    if (is_wp_error($result)) {
-        debug_to_console("file_get_contents attempt...");
-        $result = file_get_contents($query);
-        if ($result == false) {
-            // And if that doesn't work, then we'll try curl
-            debug_to_console("curl attempt...");
-            $result = $this->curl($query);
-            if (null == $result) {
-                $result = 0;
-            } // end if/else
-        }
-        $data = json_decode($result, true);
-    } else {
-        $response = wp_remote_retrieve_body($result);
-        $data = json_decode($response, true);
-    }
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_HEADER, 0);
+    curl_setopt($curl, CURLOPT_USERAGENT, '');
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
 
-    return $data;
-}
+    $response = curl_exec($curl);
+    if (0 !== curl_errno($curl) || 200 !== curl_getinfo($curl, CURLINFO_HTTP_CODE)) {
+        $response = null;
+    } // end if
+    curl_close($curl);
+
+    return $response;
+
+} // end curl
+
 /**
  * UNUSED - Collect posts and send to appropriate display function
  * @param string $posttype - Post type for the ratings
