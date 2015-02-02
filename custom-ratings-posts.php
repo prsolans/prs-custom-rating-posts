@@ -612,7 +612,7 @@ function get_posttype_category()
     return false;
 }
 
-function get_weighted_score($us, $fs, $fsRatings, $yelp, $yelpRatings)
+function get_restaurant_metascore($us, $fs, $fsRatings, $yelp, $yelpRatings)
 {
     $overallScore = 0;
     $ourScoreMultiplier = 1;
@@ -622,27 +622,34 @@ function get_weighted_score($us, $fs, $fsRatings, $yelp, $yelpRatings)
         $fsScore = $fs * $fsRatings;
         $overallScore += $fsScore;
         debug_to_console('FS:' . $fsScore);
-
     }
     if ($yelpRatings > 0) {
         $yelpScore = $yelp * $yelpRatings * 2; // x2 accounts for 5-star scale
         $overallScore += $yelpScore;
         debug_to_console('Y:' . $yelpScore);
-
     }
     // Add our rating to equation, weighted as equal to ALL external ratings
     if ($us > 0 && $externalReviews > 0) {
-        $ourScore = $us * $externalReviews;
+        $ourScore = $us * ($externalReviews * 2);
         $overallScore += $ourScore;
-        $ourScoreMultiplier = 2;
+        $ourScoreMultiplier = 3;
         debug_to_console('US:' . $ourScore);
 
     }
 
+    $weightedScore['score'] = round(($overallScore / ($externalReviews * $ourScoreMultiplier)) * 10);
 
-    $weightedScore = $overallScore / ($externalReviews * $ourScoreMultiplier);
+    $weightedScore['class'] = 'mixed';
 
-    return round($weightedScore, 2);
+    $weightedScore['externalReviews'] = $externalReviews;
+
+    if ($weightedScore['score'] > 70) {
+        $weightedScore['class'] = 'positive';
+    }
+    if ($weightedScore['score'] < 50) {
+        $weightedScore['class'] = 'negative';
+    }
+    return $weightedScore;
 }
 
 function get_foursquare_data($name, $location)
@@ -709,8 +716,9 @@ function get_foursquare_data($name, $location)
                         $picturesToShow = 2;
                     }
                     for ($picturesToShow; $picturesToShow > -1; $picturesToShow--) {
+
                         $path = $venueImages[0]['items'][$picturesToShow]['prefix'] . '250x250' . $venueImages[0]['items'][$picturesToShow]['suffix'];
-                        echo "<img class='fs-image' src='" . $path . "'/>";
+                        $venueInfo['image' . $picturesToShow] = $path;
                     }
 
                     if (isset($data['response']['venue']['rating'])) {
