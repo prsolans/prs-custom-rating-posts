@@ -18,6 +18,7 @@ require_once('post-types/Restaurants.php');
 require_once('post-types/Services.php');
 require_once('post-types/Shops.php');
 
+require_once('lib/OAuth.php');
 
 add_action('init', 'register_location_taxonomy');
 
@@ -611,31 +612,45 @@ function get_posttype_category()
     return false;
 }
 
-/**
- * Defines the function used to initial the cURL library.
- *
- * @param  string $url To URL to which the request is being made
- * @return string  $response   The response, if available; otherwise, null
- */
-function curl($url)
+function get_restaurant_metascore($us, $fs, $fsRatings, $yelp, $yelpRatings)
 {
+    $overallScore = 0;
+    $ourScoreMultiplier = 1;
+    // Balance FS & Yelp based on review counts
+    $externalReviews = $fsRatings + $yelpRatings;
+    if ($fsRatings > 0) {
+        $fsScore = $fs * $fsRatings;
+        $overallScore += $fsScore;
+        debug_to_console('FS:' . $fsScore);
+    }
+    if ($yelpRatings > 0) {
+        $yelpScore = $yelp * $yelpRatings * 2; // x2 accounts for 5-star scale
+        $overallScore += $yelpScore;
+        debug_to_console('Y:' . $yelpScore);
+    }
+    // Add our rating to equation, weighted as equal to ALL external ratings
+    if ($us > 0 && $externalReviews > 0) {
+        $ourScore = $us * ($externalReviews * 2);
+        $overallScore += $ourScore;
+        $ourScoreMultiplier = 3;
+        debug_to_console('US:' . $ourScore);
 
-    $curl = curl_init($url);
+    }
 
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($curl, CURLOPT_HEADER, 0);
-    curl_setopt($curl, CURLOPT_USERAGENT, '');
-    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+    $weightedScore['score'] = round(($overallScore / ($externalReviews * $ourScoreMultiplier)) * 10);
 
-    $response = curl_exec($curl);
-    if (0 !== curl_errno($curl) || 200 !== curl_getinfo($curl, CURLINFO_HTTP_CODE)) {
-        $response = null;
-    } // end if
-    curl_close($curl);
+    $weightedScore['class'] = 'mixed';
 
-    return $response;
+    $weightedScore['externalReviews'] = $externalReviews;
 
-} // end curl
+    if ($weightedScore['score'] > 70) {
+        $weightedScore['class'] = 'positive';
+    }
+    if ($weightedScore['score'] < 50) {
+        $weightedScore['class'] = 'negative';
+    }
+    return $weightedScore;
+}
 
 function get_foursquare_data($name, $location)
 {
@@ -701,8 +716,9 @@ function get_foursquare_data($name, $location)
                         $picturesToShow = 2;
                     }
                     for ($picturesToShow; $picturesToShow > -1; $picturesToShow--) {
+
                         $path = $venueImages[0]['items'][$picturesToShow]['prefix'] . '250x250' . $venueImages[0]['items'][$picturesToShow]['suffix'];
-                        echo "<img class='fs-image' src='" . $path . "'/>";
+                        $venueInfo['image' . $picturesToShow] = $path;
                     }
 
                     if (isset($data['response']['venue']['rating'])) {
@@ -720,45 +736,22 @@ function get_foursquare_data($name, $location)
     return false;
 }
 
-function randString($length, $charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+/**
+ * Queries the API by the input values from the page
+ *
+ * @param    $term        The search term to query
+ * @param    $location    The location of the business to query
+ */
+function get_yelp_data($term, $location)
 {
-    $str = '';
-    $count = strlen($charset);
-    while ($length--) {
-        $str .= $charset[mt_rand(0, $count - 1)];
-    }
-    return $str;
-}
-
-function get_yelp_data($name, $location)
-{
-    $client_id = YELP_CONSUMER_KEY;
-    $client_secret = YELP_CONSUMER_SECRET;
-    $client_token = YELP_TOKEN;
-    $client_token_secret = YELP_TOKEN_SECRET;
-
-    $query_timestamp = time();
-    $signature_method = 'HMAC-SHA1';
-    $generated_nonce = randString('9');
-
-    // Search query
-    $query = 'http://api.yelp.com/v2/search?';
-    $query .= '&oauth_consumer_key=' . $client_id;
-    $query .= '&oauth_token=' . $client_token;
-    $query .= '&oauth_signature_method=' . $signature_method;
-    $query .= '&oauth_signature=' . $client_secret;
-    $query .= '&oauth_timestamp=' . $query_timestamp;
-    $query .= '&oauth_nonce=' . $generated_nonce;
-    $query .= '&location=' . rawurlencode($location);
-    $query .= '&term=' . rawurlencode($name);
-    $query .= '&limit=1';
-
-    debug_to_console($query);
+    $response = yelp_api_search($term, $location);
+    $thisPlace = $response['businesses'][0];
+    return $thisPlace;
 }
 
 function get_external_data($query)
 {
-    debug_to_console($query);
+    debug_to_console('Q: ' . $query);
 
     debug_to_console("wp_remote_get attempt...");
     $result = wp_remote_get($query);
@@ -782,6 +775,91 @@ function get_external_data($query)
 
     return $data;
 }
+
+/**
+ * Makes a request to the Yelp API and returns the response
+ *
+ * @param    $host    The domain host of the API
+ * @param    $path    The path of the APi after the domain
+ * @return   The JSON response from the request
+ */
+function yelp_api_request($host, $path)
+{
+    $unsigned_url = "http://" . $host . $path;
+
+    // Token object built using the OAuth library
+    $token = new OAuthToken(YELP_TOKEN, YELP_TOKEN_SECRET);
+
+    // Consumer object built using the OAuth library
+    $consumer = new OAuthConsumer(YELP_CONSUMER_KEY, YELP_CONSUMER_SECRET);
+
+    // Yelp uses HMAC SHA1 encoding
+    $signature_method = new OAuthSignatureMethod_HMAC_SHA1();
+
+    $oauthrequest = OAuthRequest::from_consumer_and_token(
+        $consumer,
+        $token,
+        'GET',
+        $unsigned_url
+    );
+
+    // Sign the request
+    $oauthrequest->sign_request($signature_method, $consumer, $token);
+
+    // Get the signed URL
+    $signed_url = $oauthrequest->to_url();
+
+    $data = get_external_data($signed_url);
+
+    return $data;
+}
+
+/**
+ * Query the Search API by a search term and location
+ *
+ * @param    $term        The search term passed to the API
+ * @param    $location    The search location passed to the API
+ * @return   The JSON response from the request
+ */
+function yelp_api_search($term, $location)
+{
+    $url_params = array();
+
+    $url_params['term'] = $term;
+    $url_params['location'] = $location;
+    $url_params['limit'] = 1;
+    $search_path = "/v2/search" . "?" . http_build_query($url_params);
+
+    return yelp_api_request('api.yelp.com', $search_path);
+}
+
+
+/**
+ * Defines the function used to initial the cURL library.
+ *
+ * @param  string $url To URL to which the request is being made
+ * @return string  $response   The response, if available; otherwise, null
+ */
+function curl($url)
+{
+
+    $curl = curl_init($url);
+
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_HEADER, 0);
+    curl_setopt($curl, CURLOPT_USERAGENT, '');
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+
+    $response = curl_exec($curl);
+    if (0 !== curl_errno($curl) || 200 !== curl_getinfo($curl, CURLINFO_HTTP_CODE)) {
+        $response = null;
+    } // end if
+    curl_close($curl);
+
+    return $response;
+
+} // end curl
+
 /**
  * UNUSED - Collect posts and send to appropriate display function
  * @param string $posttype - Post type for the ratings

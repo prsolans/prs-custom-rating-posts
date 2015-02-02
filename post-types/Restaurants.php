@@ -175,6 +175,16 @@ function get_overall_restaurant_ratings($postID)
         if(count($prs) > 0){ $ratings['count']++;}
         if(count($allykc) > 0){ $ratings['count']++;}
         $ratings['overallScore'] = round(($prsScore + $allykcScore) / (count($prs) + count($allykc)), 1);
+
+        $ratings['class'] = 'mixed';
+
+        if ($ratings['overallScore'] > 7) {
+            $ratings['class'] = 'positive';
+        }
+        if ($ratings['overallScore'] < 5) {
+            $ratings['class'] = 'negative';
+        }
+
         return $ratings;
     }
 
