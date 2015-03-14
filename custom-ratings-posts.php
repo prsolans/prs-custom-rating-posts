@@ -2,12 +2,12 @@
 /**
  * Plugin Name: AKC/PRS - Custom Ratings Posts
  * Description: Plugin for creating custom post type for rating experiences.
- * Version: 0.5
+ * Version: 0.6
  * Author: prsolans
  * License: GPL2
  *
- * Date: 2/2/15
- * Time: 9:40 A M
+ * Date: 3/14/15
+ * Time: 4:40 PM
  */
 
 require_once('admin/options.php');
