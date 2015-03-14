@@ -2,12 +2,12 @@
 /**
  * Plugin Name: AKC/PRS - Custom Ratings Posts
  * Description: Plugin for creating custom post type for rating experiences.
- * Version: 0.35
+ * Version: 0.5
  * Author: prsolans
  * License: GPL2
  *
- * Date: 1/5/15
- * Time: 9:40 PM
+ * Date: 2/2/15
+ * Time: 9:40 A M
  */
 
 require_once('admin/options.php');
@@ -512,6 +512,36 @@ function display_recent_ratings($lastMonth = false)
     } else {
         echo "Nothing to report so far this month.";
     }
+}
+
+/**
+ * Display restaurants marked as on the radar
+ */
+function display_restaurants_radar()
+{
+
+    echo "<h2>Restaurants to Check Out</h2>";
+
+    $posts = get_posts(array(
+        'numberposts' => 5,
+        'post_type' => array('restaurant'),
+        'meta_query' => array(
+            array(
+                'key' => 'status',
+                'value' => 'On the Radar',
+            )
+        ),
+        'orderby' => 'post_date',
+        'order' => 'ASC'
+    ));
+
+    echo "<ul>";
+    if ($posts) {
+        foreach ($posts AS $item) {
+            echo "<li><a href='" . get_permalink($item->ID) . "'> " . $item->post_title . "</a></li>";
+        }
+    }
+    echo "</ul>";
 }
 
 /**
