@@ -523,7 +523,7 @@ function display_restaurants_radar()
     echo "<h2>Restaurants to Check Out</h2>";
 
     $posts = get_posts(array(
-        'numberposts' => 5,
+        'numberposts' => 10,
         'post_type' => array('restaurant'),
         'meta_query' => array(
             array(
